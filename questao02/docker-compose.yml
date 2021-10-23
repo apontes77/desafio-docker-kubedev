@@ -1,0 +1,94 @@
+version: '3.8'
+
+volumes:
+  mongo_dir:
+  mariaDB_dir:
+  postgres_dir:
+  redis_dir:
+
+services:
+  mongodb_q1: 
+    container_name: mongo
+    image: mongo:4.4.3
+    ports:
+     - 27017:27017
+    volumes:
+     - mongo_dir:/data/db
+    environment:
+     - MONGODB_INITDB_ROOT_USERNAME=${MONGO_ROOT_USER}
+     - MONGODB_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
+  
+  mongo-express:
+    image: mongo-express:0.54
+    ports:
+     - 8081:8081
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongo
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_MONGODB_ENABLE_ADMIN=false
+      - ME_CONFIG_MONGODB_AUTH_DATABASE=admin
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGO_ROOT_USER}
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_ROOT_PASSWORD}
+      - ME_CONFIG_BASICAUTH_USERNAME=${MONGOEXPRESS_LOGIN}
+      - ME_CONFIG_BASICAUTH_PASSWORD=${MONGOEXPRESS_PASSWORD}
+    volumes:
+     - mongo_dir:/data/db
+    depends_on:
+     - mongodb_q1
+
+  mariaDB_q1:
+    image: mariadb:10.6 
+    ports:
+     - 3307:3307
+    volumes:
+     - mariaDB_dir:/data/db
+    environment:
+      MARIADB_ROOT_PASSWORD: maria123
+
+  phpmyadmin:
+    image: phpmyadmin
+    depends_on:
+     - mariaDB_q1
+    ports:
+     - 8082:80
+    environment:
+     - PMA_ARBITRARY=1
+
+  postgres_dir: 
+    image: postgres:14.0
+    ports:
+     - 5432:5432
+    volumes:
+     - postgres_dir:/data/db
+    environment:
+      POSTGRES_PASSWORD: postgres
+
+  pgadmin-compose:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "mail@mail.com.br"
+      PGADMIN_DEFAULT_PASSWORD: "PgAdmin2019!"
+    ports:
+      - "443:443"
+    depends_on:
+      - postgres_dir
+
+  redis_dir:
+    image: redis:6.2.6
+    command: redis-server --requirepass Redis2021
+    ports:
+     - 6379:6379
+    volumes:
+     - redis_dir:/data/db
+
+  redis-commander:
+    container_name: redis-commander
+    hostname: redis-commander
+    image: rediscommander/redis-commander:latest
+    environment:
+     - REDIS_HOSTS=local:redis:6379
+    ports:
+     - "8081:8081"
+    volumes:
+     - redis_dir:/data/db
+

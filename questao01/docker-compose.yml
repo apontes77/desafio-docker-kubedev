@@ -1,0 +1,45 @@
+version: '3.8'
+
+volumes:
+  mongo_dir:
+  mariaDB_dir:
+  postgres_dir:
+  redis_dir:
+
+services:
+  mongodb_q1: 
+    image: mongo:4.4.3
+    ports:
+    - 27017:27017
+    volumes:
+    - mongo_dir:/data/db
+    environment:
+      MONGODB_INITDB_ROOT_USERNAME: mongouser
+      MONGODB_INITDB_ROOT_PASSWORD: mongopwd
+
+  mariaDB_q1:
+    image: mariadb:10.6 
+    ports:
+    - 3307:3307
+    volumes:
+    - mariaDB_dir:/data/db
+    environment:
+      MARIADB_ROOT_PASSWORD: maria123
+
+  postgres_dir: 
+    image: postgres:14.0
+    ports:
+    - 5432:5432
+    volumes:
+    - postgres_dir:/data/db
+    environment:
+      POSTGRES_PASSWORD: postgres
+
+  redis_dir:
+    image: redis:6.2.6
+    command: redis-server --requirepass Redis2021
+    ports:
+    - 6379:6379
+    volumes:
+    - redis_dir:/data/db
+
