@@ -6,14 +6,22 @@ volumes:
   postgres_dir:
   redis_dir:
 
+networks:
+  mongo_net:
+  phpmyadmin_net:
+  redis_net:
+  postgres_net:
+
 services:
-  mongodb_q1: 
+  mongodb: 
     container_name: mongo
     image: mongo:4.4.3
     ports:
      - 27017:27017
     volumes:
      - mongo_dir:/data/db
+    networks:
+     - mongo_net
     environment:
      - MONGODB_INITDB_ROOT_USERNAME=${MONGO_ROOT_USER}
      - MONGODB_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
@@ -21,74 +29,88 @@ services:
   mongo-express:
     image: mongo-express:0.54
     ports:
-     - 8081:8081
+      - 8081:8081
     environment:
-      - ME_CONFIG_MONGODB_SERVER=mongo
-      - ME_CONFIG_MONGODB_PORT=27017
-      - ME_CONFIG_MONGODB_ENABLE_ADMIN=false
-      - ME_CONFIG_MONGODB_AUTH_DATABASE=admin
-      - ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGO_ROOT_USER}
-      - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_ROOT_PASSWORD}
       - ME_CONFIG_BASICAUTH_USERNAME=${MONGOEXPRESS_LOGIN}
       - ME_CONFIG_BASICAUTH_PASSWORD=${MONGOEXPRESS_PASSWORD}
-    volumes:
-     - mongo_dir:/data/db
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGO_ROOT_USER}
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_ROOT_PASSWORD}
+    networks:
+     - mongo_net
     depends_on:
-     - mongodb_q1
+     - mongodb
 
-  mariaDB_q1:
+  mariaDB:
     image: mariadb:10.6 
     ports:
      - 3307:3307
     volumes:
      - mariaDB_dir:/data/db
+    networks:
+     - phpmyadmin_net
     environment:
-      MARIADB_ROOT_PASSWORD: maria123
+     - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
 
   phpmyadmin:
-    image: phpmyadmin
+    image: phpmyadmin/phpmyadmin:latest
     depends_on:
-     - mariaDB_q1
+     - mariaDB
     ports:
-     - 8082:80
+     - 8080:80
+    networks:
+     - phpmyadmin_net
     environment:
-     - PMA_ARBITRARY=1
+     - PMA_HOST=mariaDB
 
-  postgres_dir: 
+  postgres: 
     image: postgres:14.0
     ports:
      - 5432:5432
     volumes:
-     - postgres_dir:/data/db
+     - postgres_dir:/vol/postgresql/data
+    networks:
+     - postgres_net
     environment:
-      POSTGRES_PASSWORD: postgres
+     - POSTGRES_USER=${POSTGRES_USER}
+     - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+     - POSTGRES_DB=${POSTGRES_DB}
 
   pgadmin-compose:
-    image: dpage/pgadmin4
+    image: fenglc/pgadmin4:latest
     environment:
-      PGADMIN_DEFAULT_EMAIL: "mail@mail.com.br"
-      PGADMIN_DEFAULT_PASSWORD: "PgAdmin2019!"
+     - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
+     - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
     ports:
-      - "443:443"
+     - 5050:5050
+    networks:
+     - postgres_net
     depends_on:
-      - postgres_dir
+     - postgres
 
-  redis_dir:
+  redis:
     image: redis:6.2.6
-    command: redis-server --requirepass Redis2021
+    command: ["redis-server", "--appendonly", "yes"]
     ports:
      - 6379:6379
+    networks:
+     - redis_net
+    links: 
+     - redis-commander
     volumes:
      - redis_dir:/data/db
 
   redis-commander:
-    container_name: redis-commander
-    hostname: redis-commander
     image: rediscommander/redis-commander:latest
+    hostname: redis-commander
     environment:
-     - REDIS_HOSTS=local:redis:6379
+     - REDIS_HOSTS=redis
+     - REDIS_PORT=redis:6379
+     - REDIS_PASSWORD=root
+     - HTTP_USER=root
+     - HTTP_PASSWORD=root
     ports:
-     - "8081:8081"
-    volumes:
-     - redis_dir:/data/db
+     - 8082:8082
+    networks:
+     - redis_net
 
